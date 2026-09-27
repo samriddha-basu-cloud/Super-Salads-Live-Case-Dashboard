@@ -1,0 +1,1157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Super Salads — Live Case Dashboard</title>
+<style>
+  :root{
+    --bg:#f4f6f5;
+    --panel:#ffffff;
+    --ink:#16211c;
+    --muted:#5b6b63;
+    --line:#e1e7e3;
+    --accent:#1f6f4a;
+    --accent-dark:#154d33;
+    --accent-soft:#e7f3ec;
+    --amber:#fff7e0;
+    --amber-line:#e8d9a0;
+    --red:#8a3b3b;
+    --red-soft:#f6e9e9;
+    --grey1:#1a1a1a;
+    --grey2:#555555;
+    --grey3:#9aa39c;
+    --grey-fill:#d9d9d9;
+    --shadow: 0 1px 2px rgba(20,30,25,.06), 0 4px 16px rgba(20,30,25,.05);
+    --radius: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);}
+  body{padding-bottom:80px;}
+  a{color:var(--accent-dark);}
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:50;
+    background:linear-gradient(180deg, var(--accent-dark), var(--accent));
+    color:#fff;
+    padding:14px 22px;
+    display:flex;align-items:center;justify-content:space-between;
+    flex-wrap:wrap;gap:10px;
+    box-shadow:0 2px 10px rgba(0,0,0,.15);
+  }
+  .topbar .brand{display:flex;flex-direction:column;gap:2px;}
+  .topbar .brand h1{margin:0;font-size:19px;font-weight:700;letter-spacing:.2px;}
+  .topbar .brand p{margin:0;font-size:12.5px;opacity:.85;}
+  .topbar .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .badge{
+    font-size:11.5px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.15);
+    border:1px solid rgba(255,255,255,.35);
+  }
+  .badge.warn{background:rgba(255,255,255,.9);color:var(--accent-dark);font-weight:600;}
+  .btn{
+    appearance:none;border:0;cursor:pointer;font-weight:600;font-size:13px;
+    padding:9px 16px;border-radius:9px;transition:.15s transform,.15s box-shadow,.15s background;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn-reset{background:#fff;color:var(--accent-dark);}
+  .btn-reset:hover{box-shadow:0 2px 10px rgba(0,0,0,.25);}
+  .btn-ghost{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.35);}
+  .btn-ghost:hover{background:rgba(255,255,255,.22);}
+
+  /* ---------- layout ---------- */
+  .wrap{max-width:1240px;margin:0 auto;padding:22px;}
+  .nav{
+    display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;
+    position:sticky;top:62px;z-index:40;background:var(--bg);padding:8px 0;
+  }
+  .nav button{
+    appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--muted);
+    padding:8px 14px;border-radius:999px;font-size:12.5px;font-weight:600;cursor:pointer;
+  }
+  .nav button.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+  section.view{display:none;}
+  section.view.active{display:block;}
+
+  .kpirow{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:20px;}
+  .kpi{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 16px;box-shadow:var(--shadow);
+  }
+  .kpi .lbl{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;font-weight:600;}
+  .kpi .val{font-size:22px;font-weight:700;margin-top:4px;color:var(--ink);}
+  .kpi .sub{font-size:11.5px;color:var(--grey3);margin-top:2px;}
+  .kpi.bad .val{color:var(--red);}
+  .kpi.good .val{color:var(--accent-dark);}
+
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:20px;box-shadow:var(--shadow);margin-bottom:18px;
+  }
+  .card h2{margin:0 0 4px;font-size:17px;}
+  .card .verdict{
+    font-size:14px;font-weight:600;color:var(--accent-dark);
+    background:var(--accent-soft);border:1px solid #cfe6da;border-radius:9px;
+    padding:10px 14px;margin:10px 0 16px;
+  }
+  .card .verdict.bad{color:var(--red);background:var(--red-soft);border-color:#e6cfcf;}
+  .card p.desc{color:var(--grey2);font-size:13.5px;line-height:1.55;margin:6px 0 14px;}
+  .grid2{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;}
+  .grid2b{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  @media (max-width:820px){.grid2, .grid2b{grid-template-columns:1fr;}}
+
+  table{width:100%;border-collapse:collapse;font-size:12.8px;}
+  th,td{padding:7px 9px;border:1px solid var(--line);text-align:right;}
+  th:first-child,td:first-child{text-align:left;}
+  thead th{background:var(--grey-fill);color:var(--grey1);font-weight:700;font-size:11.8px;}
+  tbody tr:nth-child(even){background:#fafbfa;}
+  tfoot td{font-weight:700;background:#eef3ef;}
+  .tablewrap{overflow-x:auto;}
+
+  .chartbox{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px;}
+  .chartbox .title{font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:6px;}
+  canvas{width:100%;display:block;}
+
+  .fig-note{font-size:11.5px;color:var(--grey3);margin-top:6px;font-style:italic;}
+
+  /* ---------- inputs ---------- */
+  .input-num{
+    width:74px;padding:4px 5px;border:1px solid var(--line);border-radius:5px;
+    font-size:12px;text-align:right;background:var(--amber);border-color:var(--amber-line);
+  }
+  .input-num:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  .input-wide{width:100px;}
+  .fieldrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line);}
+  .fieldrow label{font-size:13px;color:var(--ink);}
+  .fieldrow .hint{font-size:11px;color:var(--grey3);display:block;}
+  .fields-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 24px;}
+  @media (max-width:700px){.fields-grid{grid-template-columns:1fr;}}
+
+  details.inputs-group{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    margin-bottom:12px;box-shadow:var(--shadow);
+  }
+  details.inputs-group>summary{
+    cursor:pointer;padding:14px 18px;font-weight:700;font-size:14px;list-style:none;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  details.inputs-group>summary::-webkit-details-marker{display:none;}
+  details.inputs-group>summary:after{content:"▾";color:var(--grey3);transition:.15s transform;}
+  details.inputs-group[open]>summary:after{transform:rotate(180deg);}
+  .inputs-body{padding:0 18px 18px;}
+
+  .legend-dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:middle;}
+
+  .footer-note{max-width:1240px;margin:30px auto 0;padding:0 22px;color:var(--grey3);font-size:11.5px;text-align:center;}
+
+  .toast{
+    position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--accent-dark);color:#fff;padding:10px 18px;border-radius:9px;font-size:13px;
+    box-shadow:0 6px 24px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:.2s;
+    z-index:100;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .edited-flag{
+    display:none;font-size:11px;background:var(--amber);border:1px solid var(--amber-line);
+    color:#6b5a1c;padding:2px 8px;border-radius:999px;margin-left:8px;font-weight:600;
+  }
+  .edited-flag.show{display:inline-block;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <h1>Super Salads — Live Case Dashboard</h1>
+    <p>Samriddha Basu · PRN 25020741055 · MBA (OM), Batch 2025–27 · Symbiosis Institute of Operations Management, Nashik</p>
+  </div>
+  <div class="actions">
+    <span class="badge" id="edit-badge">Showing case values</span>
+    <button class="btn btn-ghost" id="btn-export">Export as CSV</button>
+    <button class="btn btn-reset" id="btn-reset">↺ Reset to case values</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="nav" id="nav">
+    <button data-view="v-overview" class="active">Overview</button>
+    <button data-view="v-q1">Q1 · Business health</button>
+    <button data-view="v-q2">Q2 · Turnover</button>
+    <button data-view="v-q3">Q3 · Profitability</button>
+    <button data-view="v-q4">Q4 · Improvement scope</button>
+    <button data-view="v-q5">Q5 · 2-year projection</button>
+    <button data-view="v-inputs">✎ Edit inputs</button>
+  </div>
+
+  <!-- =============== OVERVIEW =============== -->
+  <section class="view active" id="v-overview">
+    <div class="kpirow">
+      <div class="kpi"><div class="lbl">Annual turnover</div><div class="val" id="ov-turnover">—</div><div class="sub">53,500 orders/yr</div></div>
+      <div class="kpi" id="ov-np-kpi"><div class="lbl">Net profit</div><div class="val" id="ov-netprofit">—</div><div class="sub" id="ov-margin">—</div></div>
+      <div class="kpi"><div class="lbl">Avg orders / day</div><div class="val" id="ov-avgorders">—</div><div class="sub" id="ov-change">—</div></div>
+      <div class="kpi"><div class="lbl">Monthly churn</div><div class="val" id="ov-churn">—</div><div class="sub" id="ov-lost">—</div></div>
+      <div class="kpi" id="ov-mos-kpi"><div class="lbl">Margin of safety</div><div class="val" id="ov-mos">—</div><div class="sub" id="ov-be">—</div></div>
+      <div class="kpi"><div class="lbl">Q8 exit multiple</div><div class="val" id="ov-multiple">—</div><div class="sub">vs today's turnover</div></div>
+    </div>
+
+    <div class="card">
+      <h2>What the case asked, answered live</h2>
+      <p class="desc">Every number on this page recalculates the moment you change a case value under <b>Edit inputs</b>. Nothing here is typed in — it is all computed, the same way the accompanying Excel workbook computes it.</p>
+      <div class="grid2b">
+        <div>
+          <h3 style="font-size:13.5px;margin:8px 0 4px;">1. How is the business going?</h3>
+          <p class="desc" id="ov-q1-text" style="margin:0 0 14px;">—</p>
+          <h3 style="font-size:13.5px;margin:8px 0 4px;">2. What is the turnover?</h3>
+          <p class="desc" id="ov-q2-text" style="margin:0 0 14px;">—</p>
+          <h3 style="font-size:13.5px;margin:8px 0 4px;">3. Is the firm profitable?</h3>
+          <p class="desc" id="ov-q3-text" style="margin:0;">—</p>
+        </div>
+        <div>
+          <h3 style="font-size:13.5px;margin:8px 0 4px;">4. Scope to improve?</h3>
+          <p class="desc" id="ov-q4-text" style="margin:0 0 14px;">—</p>
+          <h3 style="font-size:13.5px;margin:8px 0 4px;">5. 2-year projection to 3x?</h3>
+          <p class="desc" id="ov-q5-text" style="margin:0;">—</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="chartbox">
+        <div class="title">Monthly order volume</div>
+        <canvas id="chart-ov-orders" height="220"></canvas>
+      </div>
+      <div class="chartbox">
+        <div class="title">Monthly net profit / (loss)</div>
+        <canvas id="chart-ov-profit" height="220"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== Q1 =============== -->
+  <section class="view" id="v-q1">
+    <div class="card">
+      <h2>1. How is the business going?</h2>
+      <div class="verdict" id="q1-verdict">—</div>
+      <div class="grid2">
+        <div>
+          <div class="tablewrap">
+            <table>
+              <thead><tr><th>Measure</th><th>Value</th></tr></thead>
+              <tbody id="q1-table"></tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <div class="chartbox" style="margin-bottom:12px;">
+            <div class="title">Orders per month</div>
+            <canvas id="chart-q1-orders" height="200"></canvas>
+          </div>
+          <div class="chartbox">
+            <div class="title">Customer lifetime value vs. acquisition cost</div>
+            <canvas id="chart-q1-ltv" height="160"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== Q2 =============== -->
+  <section class="view" id="v-q2">
+    <div class="card">
+      <h2>2. What is the turnover of the firm?</h2>
+      <div class="verdict" id="q2-verdict">—</div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>SKU</th><th>Annual orders</th><th>Selling price (₹)</th><th>Annual turnover (₹)</th><th>Share</th></tr></thead>
+          <tbody id="q2-table"></tbody>
+          <tfoot><tr><td>Total</td><td id="q2-tot-units"></td><td></td><td id="q2-tot-rev"></td><td>100.0%</td></tr></tfoot>
+        </table>
+      </div>
+      <div class="chartbox" style="margin-top:14px;">
+        <div class="title">Monthly turnover</div>
+        <canvas id="chart-q2-turnover" height="220"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== Q3 =============== -->
+  <section class="view" id="v-q3">
+    <div class="card">
+      <h2>3. Is the firm profitable? What is the profit / loss %?</h2>
+      <div class="verdict" id="q3-verdict">—</div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>SKU</th><th>Units/yr</th><th>Unit cost (₹)</th><th>Price (₹)</th><th>Contribution/unit (₹)</th><th>CM %</th></tr></thead>
+          <tbody id="q3-unit-table"></tbody>
+        </table>
+      </div>
+      <div class="grid2" style="margin-top:16px;">
+        <div class="chartbox">
+          <div class="title">Contribution margin % by SKU</div>
+          <canvas id="chart-q3-cm" height="220"></canvas>
+        </div>
+        <div class="chartbox">
+          <div class="title">Where turnover goes</div>
+          <canvas id="chart-q3-structure" height="220"></canvas>
+        </div>
+      </div>
+      <div class="tablewrap" style="margin-top:16px;">
+        <table>
+          <thead><tr><th>Line (₹)</th><th>Annual</th><th>% of turnover</th></tr></thead>
+          <tbody id="q3-pl-table"></tbody>
+        </table>
+      </div>
+      <div class="grid2" style="margin-top:16px;">
+        <div class="chartbox">
+          <div class="title">Monthly net profit / (loss)</div>
+          <canvas id="chart-q3-netprofit" height="220"></canvas>
+        </div>
+        <div class="chartbox">
+          <div class="title">Break-even vs. actual orders/day</div>
+          <canvas id="chart-q3-breakeven" height="220"></canvas>
+        </div>
+      </div>
+      <div class="chartbox" style="margin-top:16px;">
+        <div class="title">Profit sensitivity to raw-material price swings</div>
+        <canvas id="chart-q3-sensitivity" height="200"></canvas>
+      </div>
+      <div class="tablewrap" style="margin-top:16px;">
+        <table>
+          <thead><tr><th>Break-even & risk</th><th>Value</th></tr></thead>
+          <tbody id="q3-be-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== Q4 =============== -->
+  <section class="view" id="v-q4">
+    <div class="card">
+      <h2>4. Is there scope to improve sales and profit?</h2>
+      <div class="verdict" id="q4-verdict">Yes — every fact below is computed from the current inputs, not assumed.</div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Area</th><th>Fact / metric</th><th>Value</th><th>Why it matters</th></tr></thead>
+          <tbody id="q4-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== Q5 =============== -->
+  <section class="view" id="v-q5">
+    <div class="card">
+      <h2>5. Recommendations and a 2-year projection to 3x</h2>
+      <p class="desc">These four planning assumptions are <b>not</b> case values — the case only sets the growth target (3x in 2 years). Edit them below and the projection recalculates instantly.</p>
+      <div class="fields-grid" style="margin-bottom:10px;">
+        <div class="fieldrow"><label>Quarterly revenue growth<span class="hint">compounded over 8 quarters</span></label><input class="input-num" data-path="q5.growthRate" data-pct="1"></div>
+        <div class="fieldrow"><label>Contribution margin %, Q8<span class="hint">up from today's, via mix & procurement</span></label><input class="input-num" data-path="q5.cmTargetQ8" data-pct="1"></div>
+        <div class="fieldrow"><label>Fixed cost / quarter, Q1 (₹)<span class="hint">starting point</span></label><input class="input-num input-wide" data-path="q5.fixedQ1"></div>
+        <div class="fieldrow"><label>Fixed cost / quarter, Q8 (₹)<span class="hint">2nd warehouse + manpower online</span></label><input class="input-num input-wide" data-path="q5.fixedQ8"></div>
+      </div>
+      <div class="verdict" id="q5-verdict">—</div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Quarter</th><th>Turnover (₹)</th><th>CM %</th><th>Contribution (₹)</th><th>Fixed cost (₹)</th><th>Net profit (₹)</th><th>Net margin %</th></tr></thead>
+          <tbody id="q5-table"></tbody>
+        </table>
+      </div>
+      <div class="chartbox" style="margin-top:16px;">
+        <div class="title">Projected quarterly turnover and net profit</div>
+        <canvas id="chart-q5" height="240"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============== INPUTS =============== -->
+  <section class="view" id="v-inputs">
+    <div class="card" style="margin-bottom:16px;">
+      <h2>✎ Edit case inputs</h2>
+      <p class="desc">Amber cells are the case's own values — change any of them and every question above recalculates live. Nothing is hard-coded. Use <b>Reset to case values</b> in the top bar to restore the original case at any time.</p>
+    </div>
+
+    <details class="inputs-group" open>
+      <summary>1 · Recipe per Individual pack (grams) <span class="edited-flag" data-flagfor="recipe">edited</span></summary>
+      <div class="inputs-body">
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Raw material</th><th>Basic</th><th>Extravaganza</th></tr></thead>
+            <tbody id="grid-recipe"></tbody>
+          </table>
+        </div>
+        <p class="fig-note">Couple pack = 2× and Family pack = 4× these grams (fixed by the case).</p>
+      </div>
+    </details>
+
+    <details class="inputs-group">
+      <summary>2 · Raw-material cost per 250 g (₹), by month <span class="edited-flag" data-flagfor="rmCost">edited</span></summary>
+      <div class="inputs-body">
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Raw material</th><th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>May</th><th>Jun</th><th>Jul</th><th>Aug</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Dec</th></tr></thead>
+            <tbody id="grid-rmcost"></tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+
+    <details class="inputs-group">
+      <summary>3 · Monthly sales, orders by SKU <span class="edited-flag" data-flagfor="sales">edited</span></summary>
+      <div class="inputs-body">
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>SKU</th><th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>May</th><th>Jun</th><th>Jul</th><th>Aug</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Dec</th></tr></thead>
+            <tbody id="grid-sales"></tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+
+    <details class="inputs-group">
+      <summary>4 · SKU master — price, packing, delivery slabs <span class="edited-flag" data-flagfor="sku">edited</span></summary>
+      <div class="inputs-body">
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>SKU</th><th>Selling price (₹)</th><th>Box / packing cost (₹)</th></tr></thead>
+            <tbody id="grid-prices"></tbody>
+          </table>
+        </div>
+        <p class="fig-note" style="margin-top:10px;">Dunzo delivery slabs (by shipping weight, inclusive of the upper limit):</p>
+        <div class="fields-grid">
+          <div class="fieldrow"><label>Up to 500 g</label><input class="input-num" data-path="slabs.0.rate">₹</div>
+          <div class="fieldrow"><label>Up to 1,000 g</label><input class="input-num" data-path="slabs.1.rate">₹</div>
+          <div class="fieldrow"><label>Up to 1,500 g</label><input class="input-num" data-path="slabs.2.rate">₹</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="inputs-group">
+      <summary>5 · Fixed costs per month (₹) <span class="edited-flag" data-flagfor="fixed">edited</span></summary>
+      <div class="inputs-body">
+        <div class="fields-grid">
+          <div class="fieldrow"><label>Free samples & partner commission</label><input class="input-num input-wide" data-path="fixed.samples"></div>
+          <div class="fieldrow"><label>Warehouse rent</label><input class="input-num input-wide" data-path="fixed.rent"></div>
+          <div class="fieldrow"><label>Manpower</label><input class="input-num input-wide" data-path="fixed.manpower"></div>
+          <div class="fieldrow"><label>Miscellaneous</label><input class="input-num input-wide" data-path="fixed.misc"></div>
+        </div>
+      </div>
+    </details>
+
+    <details class="inputs-group">
+      <summary>6 · Other facts from the case <span class="edited-flag" data-flagfor="facts">edited</span></summary>
+      <div class="inputs-body">
+        <div class="fields-grid">
+          <div class="fieldrow"><label>Monthly customer churn</label><input class="input-num" data-path="facts.churn" data-pct="1"></div>
+          <div class="fieldrow"><label>Warehouse capacity utilisation</label><input class="input-num" data-path="facts.warehouseUtil" data-pct="1"></div>
+          <div class="fieldrow"><label>Days per month</label><input class="input-num" data-path="facts.daysPerMonth"></div>
+          <div class="fieldrow"><label>Days per year</label><input class="input-num" data-path="facts.daysPerYear"></div>
+          <div class="fieldrow"><label>Raw-material price swing — low</label><input class="input-num" data-path="facts.rmFluctLow" data-pct="1"></div>
+          <div class="fieldrow"><label>Raw-material price swing — high</label><input class="input-num" data-path="facts.rmFluctHigh" data-pct="1"></div>
+          <div class="fieldrow"><label>Metro healthy-food market growth (YoY)</label><input class="input-num" data-path="facts.marketGrowthMetro" data-pct="1"></div>
+          <div class="fieldrow"><label>India healthy-food market growth (YoY)</label><input class="input-num" data-path="facts.marketGrowthIndia" data-pct="1"></div>
+          <div class="fieldrow"><label>Firms in Pune</label><input class="input-num" data-path="facts.firmsInPune"></div>
+          <div class="fieldrow"><label>Market share of top 2 firms</label><input class="input-num" data-path="facts.topShare" data-pct="1"></div>
+          <div class="fieldrow"><label>Orders/day, 2 years ago</label><input class="input-num" data-path="facts.ordersStart"></div>
+        </div>
+      </div>
+    </details>
+  </section>
+
+</div>
+
+<div class="footer-note">Every figure on this page is computed client-side from the values in <b>Edit inputs</b>. Nothing is fetched from a server, so this page works the same once deployed as a static site.</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   DATA MODEL
+   ============================================================ */
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const INGREDIENTS = ["Spinach","Lettuce","Broccoli","Mushroom","Cherry Tomato","Capsicum","Dressing","Cottage Cheese","Sprouts","Brown Bread"];
+
+const SKUS = [
+  {id:"basic_ind",   label:"Basic – Individual",        type:"Basic",        pack:"Individual", mult:1},
+  {id:"basic_cpl",   label:"Basic – Couple",             type:"Basic",        pack:"Couple",     mult:2},
+  {id:"basic_fam",   label:"Basic – Family",             type:"Basic",        pack:"Family",     mult:4},
+  {id:"extra_ind",   label:"Extravaganza – Individual",  type:"Extravaganza", pack:"Individual", mult:1},
+  {id:"extra_cpl",   label:"Extravaganza – Couple",      type:"Extravaganza", pack:"Couple",     mult:2},
+  {id:"extra_fam",   label:"Extravaganza – Family",      type:"Extravaganza", pack:"Family",     mult:4},
+];
+
+const DEFAULTS = {
+  recipe: {
+    Basic:        [30,30,40,40,30,40,40,0,0,0],
+    Extravaganza: [30,30,40,40,30,40,40,20,20,10],
+  },
+  rmCost: {
+    "Spinach":        [25,26,25,26,25,26,25,26,25,26,25,26],
+    "Lettuce":        [50,51,52,53,54,55,56,57,58,59,60,61],
+    "Broccoli":       [80,100,90,80,90,100,80,85,90,95,100,95],
+    "Mushroom":       [35,35,35,35,40,40,40,40,45,45,45,45],
+    "Cherry Tomato":  [60,65,70,75,80,70,75,80,85,80,85,80],
+    "Capsicum":       [70,70,75,85,100,95,90,95,90,85,80,80],
+    "Dressing":       [60,65,70,75,80,85,90,95,100,95,95,90],
+    "Cottage Cheese": [70,70,70,75,75,75,80,80,80,85,85,85],
+    "Sprouts":        [50,50,51,52,53,54,55,56,57,58,59,60],
+    "Brown Bread":    [25,25,25,25,25,30,30,30,30,30,30,30],
+  },
+  sales: {
+    basic_ind: [810,720,630,720,810,900,720,810,900,990,900,720],
+    basic_cpl: [1350,1200,1050,1200,1350,1500,1200,1350,1500,1650,1500,1200],
+    basic_fam: [540,480,420,480,540,600,480,540,600,660,600,480],
+    extra_ind: [540,480,420,480,540,600,480,540,600,660,600,480],
+    extra_cpl: [720,640,560,640,720,800,640,720,800,880,800,640],
+    extra_fam: [540,480,420,480,540,600,480,540,600,660,600,480],
+  },
+  price:   { basic_ind:150, basic_cpl:250, basic_fam:500, extra_ind:180, extra_cpl:300, extra_fam:600 },
+  packing: { basic_ind:10,  basic_cpl:15,  basic_fam:20,  extra_ind:10,  extra_cpl:15,  extra_fam:20  },
+  slabs: [ {upto:500, rate:50}, {upto:1000, rate:75}, {upto:1500, rate:100} ],
+  fixed: { samples:50000, rent:100000, manpower:120000, misc:30000 },
+  facts: {
+    churn:0.20, warehouseUtil:0.70, daysPerMonth:30, daysPerYear:365,
+    rmFluctLow:0.25, rmFluctHigh:0.40,
+    marketGrowthMetro:0.35, marketGrowthIndia:0.15,
+    firmsInPune:10, topShare:0.90, ordersStart:5,
+  },
+  q5: { growthRate:0.15, cmTargetQ8:0.27, fixedQ1:900000, fixedQ8:1400000 },
+};
+
+function deepClone(o){ return JSON.parse(JSON.stringify(o)); }
+let state = deepClone(DEFAULTS);
+
+function getPath(obj, path){
+  return path.split(".").reduce((o,k)=> (o==null? o : o[k]), obj);
+}
+function setPath(obj, path, val){
+  const keys = path.split(".");
+  let o = obj;
+  for(let i=0;i<keys.length-1;i++){ o = o[keys[i]]; }
+  o[keys[keys.length-1]] = val;
+}
+
+/* ============================================================
+   FORMATTERS
+   ============================================================ */
+const INR = new Intl.NumberFormat("en-IN", {maximumFractionDigits:0});
+const INR2 = new Intl.NumberFormat("en-IN", {maximumFractionDigits:2});
+function rupee(n){ return "₹" + INR.format(Math.round(n)); }
+function rupeeSigned(n){ const s = n<0 ? "-" : ""; return s + "₹" + INR.format(Math.round(Math.abs(n))); }
+function pct(n, d=1){ return (n*100).toFixed(d) + "%"; }
+function num(n, d=1){ return Number(n).toLocaleString("en-IN", {maximumFractionDigits:d}); }
+function lakh(n){ return (n/100000).toFixed(2) + "L"; }
+
+/* ============================================================
+   CORE MODEL
+   ============================================================ */
+function skuWeight(sku){
+  const grams = state.recipe[sku.type].reduce((a,b)=>a+b,0);
+  return grams * sku.mult;
+}
+function deliveryFor(sku){
+  const w = skuWeight(sku);
+  const s = state.slabs;
+  if(w <= s[0].upto) return s[0].rate;
+  if(w <= s[1].upto) return s[1].rate;
+  return s[2].rate;
+}
+function rmCostPerUnitMonth(sku, m){
+  const grams = state.recipe[sku.type];
+  let costPer250 = 0;
+  INGREDIENTS.forEach((ing, i)=>{
+    costPer250 += grams[i] * (state.rmCost[ing][m] / 250);
+  });
+  return costPer250 * sku.mult;
+}
+
+function compute(){
+  const model = {};
+  model.months = MONTHS;
+
+  // monthly orders total
+  model.ordersByMonth = MONTHS.map((_,m)=> SKUS.reduce((s,sku)=> s + state.sales[sku.id][m], 0));
+  model.ordersAnnual = model.ordersByMonth.reduce((a,b)=>a+b,0);
+
+  // per-sku annual units
+  model.unitsAnnual = {};
+  SKUS.forEach(sku=>{ model.unitsAnnual[sku.id] = state.sales[sku.id].reduce((a,b)=>a+b,0); });
+
+  // turnover
+  model.turnoverByMonth = MONTHS.map((_,m)=> SKUS.reduce((s,sku)=> s + state.sales[sku.id][m]*state.price[sku.id], 0));
+  model.turnoverAnnual = model.turnoverByMonth.reduce((a,b)=>a+b,0);
+  model.turnoverBySku = {};
+  SKUS.forEach(sku=>{ model.turnoverBySku[sku.id] = model.unitsAnnual[sku.id]*state.price[sku.id]; });
+
+  // monthly variable costs
+  model.rmByMonth = MONTHS.map((_,m)=> SKUS.reduce((s,sku)=> s + state.sales[sku.id][m]*rmCostPerUnitMonth(sku,m), 0));
+  model.packByMonth = MONTHS.map((_,m)=> SKUS.reduce((s,sku)=> s + state.sales[sku.id][m]*state.packing[sku.id], 0));
+  model.delByMonth = MONTHS.map((_,m)=> SKUS.reduce((s,sku)=> s + state.sales[sku.id][m]*deliveryFor(sku), 0));
+  model.cmByMonth = MONTHS.map((_,m)=> model.turnoverByMonth[m]-model.rmByMonth[m]-model.packByMonth[m]-model.delByMonth[m]);
+
+  model.rmAnnual = model.rmByMonth.reduce((a,b)=>a+b,0);
+  model.packAnnual = model.packByMonth.reduce((a,b)=>a+b,0);
+  model.delAnnual = model.delByMonth.reduce((a,b)=>a+b,0);
+  model.cmAnnual = model.cmByMonth.reduce((a,b)=>a+b,0);
+  model.cmPct = model.cmAnnual/model.turnoverAnnual;
+
+  // fixed costs
+  model.fixedMonthly = state.fixed.samples+state.fixed.rent+state.fixed.manpower+state.fixed.misc;
+  model.fixedAnnual = model.fixedMonthly*12;
+  model.netByMonth = model.cmByMonth.map(v=> v-model.fixedMonthly);
+  model.netAnnual = model.netByMonth.reduce((a,b)=>a+b,0);
+  model.netPct = model.netAnnual/model.turnoverAnnual;
+  model.lossMonths = model.netByMonth.filter(v=>v<0).length;
+
+  // per-sku unit economics (weighted avg RM cost by actual sales)
+  model.unitEcon = SKUS.map(sku=>{
+    let rmWeighted = 0;
+    MONTHS.forEach((_,m)=>{ rmWeighted += rmCostPerUnitMonth(sku,m)*state.sales[sku.id][m]; });
+    rmWeighted = model.unitsAnnual[sku.id]>0 ? rmWeighted/model.unitsAnnual[sku.id] : 0;
+    const pack = state.packing[sku.id];
+    const del = deliveryFor(sku);
+    const totalCost = rmWeighted+pack+del;
+    const price = state.price[sku.id];
+    const contrib = price-totalCost;
+    const cmPct = price>0 ? contrib/price : 0;
+    return {sku, units:model.unitsAnnual[sku.id], rm:rmWeighted, pack, del, totalCost, price, contrib, cmPct,
+            revenue: model.turnoverBySku[sku.id], contribTotal: model.unitsAnnual[sku.id]*contrib};
+  });
+  model.weakestSku = model.unitEcon.reduce((a,b)=> b.cmPct<a.cmPct? b:a);
+  model.strongestSku = model.unitEcon.reduce((a,b)=> b.cmPct>a.cmPct? b:a);
+
+  // break-even / sensitivity
+  model.cmPerOrder = model.cmAnnual/model.ordersAnnual;
+  model.breakEvenOrdersYear = model.cmPerOrder>0 ? model.fixedAnnual/model.cmPerOrder : NaN;
+  model.breakEvenPerDay = model.breakEvenOrdersYear/state.facts.daysPerYear;
+  model.actualPerDay = model.ordersAnnual/state.facts.daysPerYear;
+  model.marginOfSafety = (model.actualPerDay-model.breakEvenPerDay)/model.actualPerDay;
+  model.profitPlus25 = model.netAnnual - model.rmAnnual*state.facts.rmFluctLow;
+  model.profitPlus40 = model.netAnnual - model.rmAnnual*state.facts.rmFluctHigh;
+
+  // Q1 growth & seasonality
+  model.changeJanDec = model.ordersByMonth[11]/model.ordersByMonth[0]-1;
+  model.peakVal = Math.max(...model.ordersByMonth);
+  model.peakMonth = MONTHS[model.ordersByMonth.indexOf(model.peakVal)];
+  model.troughVal = Math.min(...model.ordersByMonth);
+  model.troughMonth = MONTHS[model.ordersByMonth.indexOf(model.troughVal)];
+  model.peakTroughSwing = model.peakVal/model.troughVal-1;
+  model.growthSinceStart = state.facts.ordersStart>0 ? 150/state.facts.ordersStart : NaN; // orders/day today fixed at case's 150 reference is dynamic instead:
+  model.avgOrdersPerDay = model.ordersAnnual/state.facts.daysPerYear;
+  model.growthSinceStart = state.facts.ordersStart>0 ? model.avgOrdersPerDay/state.facts.ordersStart : NaN;
+  model.growthGapVsMetro = model.changeJanDec - state.facts.marketGrowthMetro;
+
+  // churn / LTV
+  model.customersLostPerMonth = model.avgOrdersPerDay*state.facts.churn;
+  model.avgLifetimeMonths = state.facts.churn>0 ? 1/state.facts.churn : NaN;
+  model.acquisitionCost = model.customersLostPerMonth>0 ? state.fixed.samples/model.customersLostPerMonth : NaN;
+  model.contribPerCustomerMonth = model.cmPerOrder*state.facts.daysPerMonth;
+  model.ltv = model.contribPerCustomerMonth*model.avgLifetimeMonths;
+  model.ltvCac = model.ltv/model.acquisitionCost;
+
+  // market
+  model.shareOthers = 1-state.facts.topShare;
+  model.otherFirms = Math.max(state.facts.firmsInPune-2,0);
+  model.avgShareSmaller = model.otherFirms>0 ? model.shareOthers/model.otherFirms : NaN;
+
+  // Q4 dynamic facts
+  model.delPctTurnover = model.delAnnual/model.turnoverAnnual;
+  model.rmPctTurnover = model.rmAnnual/model.turnoverAnnual;
+  model.idleWarehouseRent = state.fixed.rent*(1-state.facts.warehouseUtil)*12;
+  model.extraCapacityOrdersDay = state.facts.warehouseUtil>0 ? model.avgOrdersPerDay/state.facts.warehouseUtil-model.avgOrdersPerDay : NaN;
+  model.marketPaceOrdersDay = model.avgOrdersPerDay*(1+state.facts.marketGrowthMetro);
+  model.profitPerOrder = model.netAnnual/model.ordersAnnual;
+
+  // Q5 projection
+  const q5 = state.q5;
+  const baseRev = model.turnoverAnnual/4;
+  let rows = [];
+  let rev = baseRev;
+  for(let q=1;q<=8;q++){
+    rev = rev*(1+q5.growthRate);
+    const cmPctQ = model.cmPct + (q5.cmTargetQ8-model.cmPct)*((q-1)/7);
+    const contrib = rev*cmPctQ;
+    const fixedQ = q5.fixedQ1 + (q5.fixedQ8-q5.fixedQ1)*((q-1)/7);
+    const netp = contrib-fixedQ;
+    rows.push({q, rev, cmPctQ, contrib, fixedQ, netp, netMargin: netp/rev});
+  }
+  model.q5rows = rows;
+  model.q5year1 = rows.slice(0,4).reduce((a,r)=>({rev:a.rev+r.rev, contrib:a.contrib+r.contrib, fixedQ:a.fixedQ+r.fixedQ, netp:a.netp+r.netp}), {rev:0,contrib:0,fixedQ:0,netp:0});
+  model.q5year2 = rows.slice(4,8).reduce((a,r)=>({rev:a.rev+r.rev, contrib:a.contrib+r.contrib, fixedQ:a.fixedQ+r.fixedQ, netp:a.netp+r.netp}), {rev:0,contrib:0,fixedQ:0,netp:0});
+  model.q8AnnRev = rows[7].rev*4;
+  model.q8Multiple = model.q8AnnRev/model.turnoverAnnual;
+
+  return model;
+}
+
+/* ============================================================
+   CANVAS CHART HELPERS (no external libraries)
+   ============================================================ */
+function setupCanvas(canvas){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const cssH = canvas.height || 220;
+  canvas.width = Math.max(rect.width,300) * dpr;
+  canvas.height = cssH * dpr;
+  canvas.style.height = cssH+"px";
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx, w: Math.max(rect.width,300), h: cssH};
+}
+
+function niceMax(v){
+  if(v<=0) return 1;
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  const n = v/p;
+  let m;
+  if(n<=1) m=1; else if(n<=2) m=2; else if(n<=5) m=5; else m=10;
+  return m*p;
+}
+
+function drawBarChart(id, labels, values, opts={}){
+  const canvas = document.getElementById(id);
+  if(!canvas) return;
+  const {ctx,w,h} = setupCanvas(canvas);
+  ctx.clearRect(0,0,w,h);
+  const padL=48, padR=14, padT=14, padB=28;
+  const plotW = w-padL-padR, plotH = h-padT-padB;
+  const maxV = niceMax(Math.max(...values,1));
+  const minV = Math.min(0, Math.min(...values));
+  const range = maxV-minV;
+  const zeroY = padT + plotH*(maxV/range);
+
+  ctx.strokeStyle="#e3e7e4"; ctx.fillStyle="#8a948d"; ctx.font="10px sans-serif"; ctx.lineWidth=1;
+  const steps=4;
+  for(let i=0;i<=steps;i++){
+    const val = minV + (range*i/steps);
+    const y = padT+plotH-(plotH*i/steps);
+    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(w-padR,y); ctx.stroke();
+    ctx.textAlign="right"; ctx.fillText(opts.fmt? opts.fmt(val): Math.round(val), padL-6, y+3);
+  }
+  ctx.strokeStyle="#333"; ctx.beginPath(); ctx.moveTo(padL,zeroY); ctx.lineTo(w-padR,zeroY); ctx.stroke();
+
+  const bw = plotW/labels.length;
+  labels.forEach((lab,i)=>{
+    const v = values[i];
+    const barH = plotH*(Math.abs(v)/range);
+    const x = padL + i*bw + bw*0.18;
+    const bwid = bw*0.64;
+    const y = v>=0 ? zeroY-barH : zeroY;
+    ctx.fillStyle = opts.colorFn ? opts.colorFn(v,i) : (opts.color || "#1f6f4a");
+    ctx.fillRect(x,y,bwid,Math.max(barH,1));
+    ctx.fillStyle="#6b756f"; ctx.font="9.5px sans-serif"; ctx.textAlign="center";
+    ctx.fillText(lab, x+bwid/2, padT+plotH+14);
+  });
+}
+
+function drawLineChart(id, labels, values, opts={}){
+  const canvas = document.getElementById(id);
+  if(!canvas) return;
+  const {ctx,w,h} = setupCanvas(canvas);
+  ctx.clearRect(0,0,w,h);
+  const padL=48, padR=14, padT=14, padB=28;
+  const plotW = w-padL-padR, plotH = h-padT-padB;
+  const maxV = niceMax(Math.max(...values,1));
+  const minV = 0;
+  ctx.strokeStyle="#e3e7e4"; ctx.fillStyle="#8a948d"; ctx.font="10px sans-serif"; ctx.lineWidth=1;
+  const steps=4;
+  for(let i=0;i<=steps;i++){
+    const val = minV+(maxV-minV)*i/steps;
+    const y = padT+plotH-(plotH*i/steps);
+    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(w-padR,y); ctx.stroke();
+    ctx.textAlign="right"; ctx.fillText(opts.fmt? opts.fmt(val): Math.round(val), padL-6, y+3);
+  }
+  const stepX = plotW/(labels.length-1);
+  ctx.strokeStyle = opts.color || "#1f6f4a"; ctx.lineWidth=2.2; ctx.beginPath();
+  labels.forEach((lab,i)=>{
+    const v=values[i];
+    const x = padL+i*stepX;
+    const y = padT+plotH-(plotH*(v-minV)/(maxV-minV));
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  ctx.fillStyle = opts.color || "#1f6f4a";
+  labels.forEach((lab,i)=>{
+    const v=values[i];
+    const x = padL+i*stepX;
+    const y = padT+plotH-(plotH*(v-minV)/(maxV-minV));
+    ctx.beginPath(); ctx.arc(x,y,3,0,7); ctx.fill();
+    ctx.fillStyle="#6b756f"; ctx.font="9.5px sans-serif"; ctx.textAlign="center";
+    ctx.fillText(lab, x, padT+plotH+14);
+    ctx.fillStyle = opts.color || "#1f6f4a";
+  });
+}
+
+function drawHStack(id, segments){
+  const canvas = document.getElementById(id);
+  if(!canvas) return;
+  const {ctx,w,h} = setupCanvas(canvas);
+  ctx.clearRect(0,0,w,h);
+  const padL=10,padR=10;
+  const barY = h/2-16, barH=32;
+  const total = segments.reduce((a,s)=>a+s.v,0);
+  let x = padL;
+  const plotW = w-padL-padR;
+  segments.forEach(seg=>{
+    const sw = plotW*(seg.v/total);
+    ctx.fillStyle = seg.color;
+    ctx.fillRect(x,barY,sw,barH);
+    if(sw>44){
+      ctx.fillStyle = seg.textColor || "#fff";
+      ctx.font="11px sans-serif"; ctx.textAlign="center";
+      ctx.fillText(seg.label, x+sw/2, barY+barH/2-2);
+      ctx.font="10.5px sans-serif";
+      ctx.fillText(seg.v.toFixed(1)+"%", x+sw/2, barY+barH/2+12);
+    }
+    x+=sw;
+  });
+}
+
+function drawDualChart(id, labels, bars, line){
+  const canvas = document.getElementById(id);
+  if(!canvas) return;
+  const {ctx,w,h} = setupCanvas(canvas);
+  ctx.clearRect(0,0,w,h);
+  const padL=52, padR=52, padT=20, padB=28;
+  const plotW = w-padL-padR, plotH = h-padT-padB;
+  const maxBar = niceMax(Math.max(...bars,1));
+  const maxLine = niceMax(Math.max(...line,1));
+
+  ctx.strokeStyle="#e3e7e4"; ctx.lineWidth=1;
+  const steps=4;
+  for(let i=0;i<=steps;i++){
+    const y = padT+plotH-(plotH*i/steps);
+    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(w-padR,y); ctx.stroke();
+    ctx.fillStyle="#8a948d"; ctx.font="10px sans-serif";
+    ctx.textAlign="right"; ctx.fillText(Math.round(maxBar*i/steps), padL-6, y+3);
+    ctx.textAlign="left"; ctx.fillText(Math.round(maxLine*i/steps), w-padR+6, y+3);
+  }
+
+  const bw = plotW/labels.length;
+  labels.forEach((lab,i)=>{
+    const v=bars[i];
+    const barH = plotH*(v/maxBar);
+    const x = padL+i*bw+bw*0.2;
+    ctx.fillStyle="#cfd8d1";
+    ctx.fillRect(x, padT+plotH-barH, bw*0.6, barH);
+    ctx.fillStyle="#6b756f"; ctx.font="9.5px sans-serif"; ctx.textAlign="center";
+    ctx.fillText(lab, x+bw*0.3, padT+plotH+14);
+  });
+
+  ctx.strokeStyle="#16211c"; ctx.lineWidth=2.2; ctx.beginPath();
+  labels.forEach((lab,i)=>{
+    const v=line[i];
+    const x = padL+i*bw+bw*0.5;
+    const y = padT+plotH-(plotH*(v/maxLine));
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  ctx.fillStyle="#16211c";
+  labels.forEach((lab,i)=>{
+    const v=line[i];
+    const x = padL+i*bw+bw*0.5;
+    const y = padT+plotH-(plotH*(v/maxLine));
+    ctx.beginPath(); ctx.arc(x,y,3.2,0,7); ctx.fill();
+  });
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function fillTable(tbodyId, rows){
+  document.getElementById(tbodyId).innerHTML = rows.map(r=>"<tr>"+r.map((c,i)=>`<td>${c}</td>`).join("")+"</tr>").join("");
+}
+
+function render(){
+  const m = compute();
+
+  // ---- overview KPIs
+  document.getElementById("ov-turnover").textContent = rupee(m.turnoverAnnual);
+  document.getElementById("ov-netprofit").textContent = rupeeSigned(m.netAnnual);
+  document.getElementById("ov-np-kpi").className = "kpi " + (m.netAnnual>=0 ? "good":"bad");
+  document.getElementById("ov-margin").textContent = pct(m.netPct,2) + " margin · " + m.lossMonths + " loss months";
+  document.getElementById("ov-avgorders").textContent = num(m.avgOrdersPerDay,1);
+  document.getElementById("ov-change").textContent = (m.changeJanDec>=0?"+":"") + pct(m.changeJanDec,1) + " Jan→Dec";
+  document.getElementById("ov-churn").textContent = pct(state.facts.churn,0);
+  document.getElementById("ov-lost").textContent = num(m.customersLostPerMonth,1)+" lost/month";
+  document.getElementById("ov-mos").textContent = pct(m.marginOfSafety,1);
+  document.getElementById("ov-mos-kpi").className = "kpi " + (m.marginOfSafety>0.1 ? "good":"bad");
+  document.getElementById("ov-be").textContent = num(m.breakEvenPerDay,1)+" vs "+num(m.actualPerDay,1)+" actual/day";
+  document.getElementById("ov-multiple").textContent = m.q8Multiple.toFixed(2)+"x";
+
+  document.getElementById("ov-q1-text").textContent = `Orders ${m.changeJanDec>=0?"grew":"fell"} ${pct(Math.abs(m.changeJanDec),1)} from Jan to Dec while the metro market grew ${pct(state.facts.marketGrowthMetro,0)}. Average ${num(m.avgOrdersPerDay,1)} orders/day, swinging ${pct(m.peakTroughSwing,1)} between the ${m.troughMonth} trough and ${m.peakMonth} peak.`;
+  document.getElementById("ov-q2-text").textContent = `Annual turnover is ${rupee(m.turnoverAnnual)} from ${num(m.ordersAnnual,0)} orders — an average of ${rupee(m.turnoverAnnual/12)} a month.`;
+  document.getElementById("ov-q3-text").textContent = `Net ${m.netAnnual>=0?"profit":"loss"} of ${rupeeSigned(m.netAnnual)} (${pct(Math.abs(m.netPct),2)} of turnover), with ${m.lossMonths} of 12 months in the red and a ${pct(m.marginOfSafety,1)} margin of safety over break-even.`;
+  document.getElementById("ov-q4-text").textContent = `Yes: delivery alone is ${pct(m.delPctTurnover,1)} of turnover, ${rupee(m.idleWarehouseRent)}/yr of rent is paid for idle warehouse space, and CM% ranges from ${pct(m.weakestSku.cmPct,1)} (${m.weakestSku.sku.label}) to ${pct(m.strongestSku.cmPct,1)} (${m.strongestSku.sku.label}).`;
+  document.getElementById("ov-q5-text").textContent = `On the stated growth assumptions, Q8 exit run-rate reaches ${m.q8Multiple.toFixed(2)}x today's turnover, with net margin improving from ${pct(m.netPct,2)} to ${pct(m.q5rows[7].netMargin,1)}.`;
+
+  drawBarChart("chart-ov-orders", MONTHS, m.ordersByMonth, {color:"#1f6f4a"});
+  drawBarChart("chart-ov-profit", MONTHS, m.netByMonth.map(v=>v/1000), {colorFn:(v)=> v>=0?"#16211c":"#b9c0ba", fmt:v=>Math.round(v)+"k"});
+
+  // ---- Q1
+  document.getElementById("q1-verdict").textContent =
+    `${m.changeJanDec<0?"Stalled and fragile":"Growing"}: orders ${m.changeJanDec>=0?"grew":"fell"} ${pct(Math.abs(m.changeJanDec),1)} Jan→Dec vs a ${pct(state.facts.marketGrowthMetro,0)} metro market, ${pct(m.netPct,2)} net margin, ${pct(state.facts.churn,0)} monthly churn.`;
+  document.getElementById("q1-verdict").className = "verdict" + (m.changeJanDec<0 ? " bad":"");
+  fillTable("q1-table", [
+    ["Orders/day 2 years ago", num(state.facts.ordersStart,0)],
+    ["Average orders/day today", num(m.avgOrdersPerDay,1)],
+    ["Growth since start (×)", num(m.growthSinceStart,1)+"x"],
+    ["Change, Jan → Dec", pct(m.changeJanDec,1)],
+    ["Peak month", `${m.peakMonth} (${num(m.peakVal,0)})`],
+    ["Trough month", `${m.troughMonth} (${num(m.troughVal,0)})`],
+    ["Peak vs trough swing", pct(m.peakTroughSwing,1)],
+    ["Metro market growth (YoY)", pct(state.facts.marketGrowthMetro,0)],
+    ["Growth gap vs metro market", pct(m.growthGapVsMetro,1)],
+    ["Customers lost / month", num(m.customersLostPerMonth,1)],
+    ["Average customer lifetime", num(m.avgLifetimeMonths,1)+" months"],
+    ["Acquisition cost / customer", rupee(m.acquisitionCost)],
+    ["Lifetime value / customer", rupee(m.ltv)],
+    ["LTV ÷ CAC", num(m.ltvCac,2)+"x"],
+    ["Firms in Pune", num(state.facts.firmsInPune,0)],
+    ["Share held by top 2 firms", pct(state.facts.topShare,0)],
+    ["Average share per smaller firm", pct(m.avgShareSmaller,2)],
+  ]);
+  drawBarChart("chart-q1-orders", MONTHS, m.ordersByMonth, {color:"#1f6f4a"});
+  drawBarChart("chart-q1-ltv", ["Acquisition cost","Lifetime value"], [m.acquisitionCost, m.ltv], {colorFn:(v,i)=> i===0?"#b9c0ba":"#1f6f4a", fmt:v=>"₹"+Math.round(v)});
+
+  // ---- Q2
+  document.getElementById("q2-verdict").textContent = `Annual turnover = ${rupee(m.turnoverAnnual)} from ${num(m.ordersAnnual,0)} orders — average ${rupee(m.turnoverAnnual/m.ordersAnnual)} per order, ${rupee(m.turnoverAnnual/12)} per month.`;
+  fillTable("q2-table", m.unitEcon.map(u=> [u.sku.label, num(u.units,0), rupee(u.price), rupee(u.revenue), pct(u.revenue/m.turnoverAnnual,1)]));
+  document.getElementById("q2-tot-units").textContent = num(m.ordersAnnual,0);
+  document.getElementById("q2-tot-rev").textContent = rupee(m.turnoverAnnual);
+  drawBarChart("chart-q2-turnover", MONTHS, m.turnoverByMonth.map(v=>v/100000), {color:"#1f6f4a", fmt:v=>v.toFixed(0)+"L"});
+
+  // ---- Q3
+  document.getElementById("q3-verdict").textContent = `${m.netAnnual>=0?"Profitable, but only just":"Loss-making"}: net ${m.netAnnual>=0?"profit":"loss"} of ${rupeeSigned(m.netAnnual)} on ${rupee(m.turnoverAnnual)} turnover (${pct(Math.abs(m.netPct),2)}), with ${m.lossMonths} of 12 months in the red.`;
+  document.getElementById("q3-verdict").className = "verdict" + (m.netAnnual<0 || m.netPct<0.02 ? " bad":"");
+  fillTable("q3-unit-table", m.unitEcon.map(u=> [u.sku.label, num(u.units,0), rupee(u.totalCost), rupee(u.price), rupee(u.contrib), pct(u.cmPct,1)]));
+  drawBarChart("chart-q3-cm", m.unitEcon.map(u=>u.sku.pack.slice(0,4)+"\n"+u.sku.type.slice(0,5)), m.unitEcon.map(u=>u.cmPct*100),
+    {colorFn:(v,i)=> m.unitEcon[i]===m.weakestSku?"#b9c0ba":(m.unitEcon[i]===m.strongestSku?"#16211c":"#1f6f4a"), fmt:v=>v.toFixed(0)+"%"});
+  drawHStack("chart-q3-structure", [
+    {label:"Raw material", v: m.rmPctTurnover*100, color:"#16211c"},
+    {label:"Delivery", v: m.delPctTurnover*100, color:"#1f6f4a"},
+    {label:"Packing", v: (m.packAnnual/m.turnoverAnnual)*100, color:"#7fa896"},
+    {label:"Contribution", v: m.cmPct*100, color:"#d8e3dd", textColor:"#16211c"},
+  ]);
+  fillTable("q3-pl-table", [
+    ["Turnover", rupee(m.turnoverAnnual), "100.0%"],
+    ["Less: Raw material", rupee(m.rmAnnual), pct(m.rmPctTurnover,1)],
+    ["Less: Packaging", rupee(m.packAnnual), pct(m.packAnnual/m.turnoverAnnual,1)],
+    ["Less: Delivery", rupee(m.delAnnual), pct(m.delPctTurnover,1)],
+    ["Contribution margin", rupee(m.cmAnnual), pct(m.cmPct,1)],
+    ["Less: Fixed costs (samples, rent, manpower, misc)", rupee(m.fixedAnnual), pct(m.fixedAnnual/m.turnoverAnnual,1)],
+    ["Net profit / (loss)", rupeeSigned(m.netAnnual), pct(m.netPct,2)],
+  ]);
+  drawBarChart("chart-q3-netprofit", MONTHS, m.netByMonth.map(v=>v/1000), {colorFn:(v)=> v>=0?"#16211c":"#b9c0ba", fmt:v=>Math.round(v)+"k"});
+  drawBarChart("chart-q3-breakeven", ["Break-even/day","Actual/day"], [m.breakEvenPerDay, m.actualPerDay], {colorFn:(v,i)=> i===0?"#b9c0ba":"#16211c", fmt:v=>v.toFixed(0)});
+  drawBarChart("chart-q3-sensitivity", ["Today","+"+pct(state.facts.rmFluctLow,0)+" RM","+"+pct(state.facts.rmFluctHigh,0)+" RM"],
+    [m.netAnnual/100000, m.profitPlus25/100000, m.profitPlus40/100000],
+    {colorFn:(v)=> v>=0?"#16211c":"#b9c0ba", fmt:v=>v.toFixed(1)+"L"});
+  fillTable("q3-be-table", [
+    ["Contribution per order", rupee(m.cmPerOrder)],
+    ["Break-even orders / year", num(m.breakEvenOrdersYear,0)],
+    ["Break-even orders / day", num(m.breakEvenPerDay,1)],
+    ["Actual orders / day", num(m.actualPerDay,1)],
+    ["Margin of safety", pct(m.marginOfSafety,1)],
+    [`Profit if raw material +${pct(state.facts.rmFluctLow,0)}`, rupeeSigned(m.profitPlus25)],
+    [`Profit if raw material +${pct(state.facts.rmFluctHigh,0)}`, rupeeSigned(m.profitPlus40)],
+  ]);
+
+  // ---- Q4
+  fillTable("q4-table", [
+    ["Sales: Churn", "Customers lost per month", num(m.customersLostPerMonth,1), "Every customer retained adds volume with no extra acquisition spend."],
+    ["Sales: Market growth", "Orders/day if growing with the market", num(m.marketPaceOrdersDay,1), "Growing at market pace alone would add this many orders/day over today."],
+    ["Sales: Market share", "Share held by smaller firms", pct(m.shareOthers,1), "The fragmented tail is the most reachable share to win."],
+    ["Sales: Seasonality", "Orders gap, peak − trough", num(m.peakVal-m.troughVal,0), "Trough-month offers fill capacity already paid for."],
+    ["Profit: Delivery", "Delivery as % of turnover", pct(m.delPctTurnover,1), "Second-largest cost, on a predictable daily route — room to re-negotiate."],
+    ["Profit: Raw material", "Raw material as % of turnover", pct(m.rmPctTurnover,1), "Largest cost, and prices swing 25–40% (Section 3) — procurement discipline protects margin directly."],
+    ["Profit: Warehouse", "Rent paid for idle space / year", rupee(m.idleWarehouseRent), "Idle capacity can absorb growth before any new rent is needed."],
+    ["Profit: Warehouse", "Extra orders/day idle space can absorb", num(m.extraCapacityOrdersDay,1), ""],
+    ["Profit: Product mix", "Weakest SKU (CM%)", `${m.weakestSku.sku.label} (${pct(m.weakestSku.cmPct,1)})`, "Review pricing or pack weight on the weakest SKU."],
+    ["Profit: Product mix", "Strongest SKU (CM%)", `${m.strongestSku.sku.label} (${pct(m.strongestSku.cmPct,1)})`, "Promote the SKUs with the best margin."],
+    ["Profit: Operating leverage", "Profit added per extra order", rupee(m.cmPerOrder), "Every order above break-even adds its full contribution to profit."],
+  ]);
+
+  // ---- Q5
+  document.getElementById("q5-verdict").textContent = `At ${pct(state.q5.growthRate,0)} quarterly growth, Q8 exit turnover reaches ${m.q8Multiple.toFixed(2)}x today's — ${rupee(m.q8AnnRev)} annualised vs ${rupee(m.turnoverAnnual)} today. Net margin improves from ${pct(m.netPct,2)} to ${pct(m.q5rows[7].netMargin,1)}.`;
+  document.getElementById("q5-verdict").className = "verdict" + (m.q8Multiple>=2.8 ? "" : " bad");
+  fillTable("q5-table", m.q5rows.map(r=> [`Q${r.q}`, rupee(r.rev), pct(r.cmPctQ,1), rupee(r.contrib), rupee(r.fixedQ), rupeeSigned(r.netp), pct(r.netMargin,1)]));
+  drawDualChart("chart-q5", m.q5rows.map(r=>"Q"+r.q), m.q5rows.map(r=>r.rev/100000), m.q5rows.map(r=>r.netp/100000));
+
+  // ---- edited badge
+  const edited = JSON.stringify(state) !== JSON.stringify(DEFAULTS);
+  document.getElementById("edit-badge").textContent = edited ? "Values edited — not the case original" : "Showing case values";
+  document.getElementById("edit-badge").className = "badge" + (edited ? " warn" : "");
+  document.querySelectorAll(".edited-flag").forEach(f=>{
+    const group = f.getAttribute("data-flagfor");
+    let changed = false;
+    if(group==="recipe") changed = JSON.stringify(state.recipe)!==JSON.stringify(DEFAULTS.recipe);
+    if(group==="rmCost") changed = JSON.stringify(state.rmCost)!==JSON.stringify(DEFAULTS.rmCost);
+    if(group==="sales") changed = JSON.stringify(state.sales)!==JSON.stringify(DEFAULTS.sales);
+    if(group==="sku") changed = JSON.stringify(state.price)!==JSON.stringify(DEFAULTS.price) || JSON.stringify(state.packing)!==JSON.stringify(DEFAULTS.packing) || JSON.stringify(state.slabs)!==JSON.stringify(DEFAULTS.slabs);
+    if(group==="fixed") changed = JSON.stringify(state.fixed)!==JSON.stringify(DEFAULTS.fixed);
+    if(group==="facts") changed = JSON.stringify(state.facts)!==JSON.stringify(DEFAULTS.facts);
+    f.classList.toggle("show", changed);
+  });
+
+  window.__lastModel = m;
+}
+
+/* ============================================================
+   INPUT BINDING
+   ============================================================ */
+function makeInput(path, value, opts={}){
+  const inp = document.createElement("input");
+  inp.className = "input-num" + (opts.wide?" input-wide":"");
+  inp.type = "number";
+  inp.step = "any";
+  inp.dataset.path = path;
+  if(opts.pct) inp.dataset.pct = "1";
+  syncInputValue(inp, value, !!opts.pct);
+  inp.addEventListener("input", onInputChange);
+  return inp;
+}
+function syncInputValue(inp, value, isPct){
+  inp.value = isPct ? +(value*100).toFixed(4) : value;
+}
+function onInputChange(e){
+  const inp = e.target;
+  const path = inp.dataset.path;
+  let v = parseFloat(inp.value);
+  if(isNaN(v)) v = 0;
+  if(inp.dataset.pct) v = v/100;
+  setPath(state, path, v);
+  render();
+}
+
+function buildRecipeGrid(){
+  const tbody = document.getElementById("grid-recipe");
+  tbody.innerHTML = "";
+  INGREDIENTS.forEach((ing,i)=>{
+    const tr = document.createElement("tr");
+    const tdName = document.createElement("td"); tdName.textContent = ing; tr.appendChild(tdName);
+    ["Basic","Extravaganza"].forEach(type=>{
+      const td = document.createElement("td");
+      td.appendChild(makeInput(`recipe.${type}.${i}`, state.recipe[type][i]));
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+function buildRmCostGrid(){
+  const tbody = document.getElementById("grid-rmcost");
+  tbody.innerHTML = "";
+  INGREDIENTS.forEach(ing=>{
+    const tr = document.createElement("tr");
+    const tdName = document.createElement("td"); tdName.textContent = ing; tr.appendChild(tdName);
+    MONTHS.forEach((mo,mi)=>{
+      const td = document.createElement("td");
+      td.appendChild(makeInput(`rmCost.${ing}.${mi}`, state.rmCost[ing][mi]));
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+function buildSalesGrid(){
+  const tbody = document.getElementById("grid-sales");
+  tbody.innerHTML = "";
+  SKUS.forEach(sku=>{
+    const tr = document.createElement("tr");
+    const tdName = document.createElement("td"); tdName.textContent = sku.label; tr.appendChild(tdName);
+    MONTHS.forEach((mo,mi)=>{
+      const td = document.createElement("td");
+      td.appendChild(makeInput(`sales.${sku.id}.${mi}`, state.sales[sku.id][mi]));
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+function buildPricesGrid(){
+  const tbody = document.getElementById("grid-prices");
+  tbody.innerHTML = "";
+  SKUS.forEach(sku=>{
+    const tr = document.createElement("tr");
+    const tdName = document.createElement("td"); tdName.textContent = sku.label; tr.appendChild(tdName);
+    const tdPrice = document.createElement("td"); tdPrice.appendChild(makeInput(`price.${sku.id}`, state.price[sku.id])); tr.appendChild(tdPrice);
+    const tdPack = document.createElement("td"); tdPack.appendChild(makeInput(`packing.${sku.id}`, state.packing[sku.id])); tr.appendChild(tdPack);
+    tbody.appendChild(tr);
+  });
+}
+function buildStaticBindings(){
+  document.querySelectorAll("input[data-path]").forEach(inp=>{
+    if(inp.closest("#grid-recipe, #grid-rmcost, #grid-sales, #grid-prices")) return; // built above
+    const isPct = !!inp.dataset.pct;
+    const val = getPath(state, inp.dataset.path);
+    syncInputValue(inp, val, isPct);
+    inp.addEventListener("input", onInputChange);
+  });
+}
+function rebuildAllInputs(){
+  buildRecipeGrid();
+  buildRmCostGrid();
+  buildSalesGrid();
+  buildPricesGrid();
+  document.querySelectorAll("input[data-path]").forEach(inp=>{
+    if(inp.closest("#grid-recipe, #grid-rmcost, #grid-sales, #grid-prices")) return;
+    const isPct = !!inp.dataset.pct;
+    const val = getPath(state, inp.dataset.path);
+    syncInputValue(inp, val, isPct);
+  });
+}
+
+/* ============================================================
+   NAV / RESET / EXPORT
+   ============================================================ */
+document.getElementById("nav").addEventListener("click", (e)=>{
+  const btn = e.target.closest("button[data-view]");
+  if(!btn) return;
+  document.querySelectorAll("#nav button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  document.querySelectorAll("section.view").forEach(s=>s.classList.remove("active"));
+  document.getElementById(btn.dataset.view).classList.add("active");
+  render();
+});
+
+function showToast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(()=> t.classList.remove("show"), 1800);
+}
+
+document.getElementById("btn-reset").addEventListener("click", ()=>{
+  state = deepClone(DEFAULTS);
+  rebuildAllInputs();
+  render();
+  showToast("Reset to the case's original values.");
+});
+
+document.getElementById("btn-export").addEventListener("click", ()=>{
+  const m = window.__lastModel || compute();
+  let rows = [["Metric","Value"]];
+  rows.push(["Annual turnover", m.turnoverAnnual]);
+  rows.push(["Annual net profit", m.netAnnual]);
+  rows.push(["Net margin %", (m.netPct*100).toFixed(2)]);
+  rows.push(["Break-even orders/day", m.breakEvenPerDay.toFixed(1)]);
+  rows.push(["Actual orders/day", m.actualPerDay.toFixed(1)]);
+  rows.push(["Q8 exit multiple", m.q8Multiple.toFixed(2)]);
+  const csv = rows.map(r=>r.join(",")).join("\n");
+  const blob = new Blob([csv], {type:"text/csv"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "super-salads-summary.csv"; a.click();
+  URL.revokeObjectURL(url);
+});
+
+window.addEventListener("resize", ()=> render());
+
+/* ============================================================
+   INIT
+   ============================================================ */
+rebuildAllInputs();
+render();
+</script>
+</body>
+</html>
